@@ -20,23 +20,25 @@ permissions:
 
 env:
   TF_WORKING_DIR: environments/preprod
-  KEY_VAULT_NAME: your-keyvault-name
 
 jobs:
 
   # ============================================================
-  # FEATURE BRANCH / PR
+  # FEATURE BRANCH / PR - PLAN
   # ============================================================
 
   terraform-plan:
+
     name: Terraform Plan
+
     if: github.ref != 'refs/heads/main'
+
     runs-on: self-hosted
 
     steps:
 
       # -----------------------------
-      # Checkout
+      # Checkout Code
       # -----------------------------
       - name: Checkout Code
         uses: actions/checkout@v4
@@ -44,20 +46,22 @@ jobs:
       # -----------------------------
       # Verify Terraform Directory
       # -----------------------------
-      - name: Verify Terraform Directory
-        shell: powershell
+      - name: Verify Preprod Directory
+        shell: cmd
         run: |
-          Write-Host "Current Directory:"
-          Get-Location
+          echo Current Directory:
+          cd
 
-          Write-Host "Repository Contents:"
-          Get-ChildItem
+          echo.
+          echo Repository Contents:
+          dir
 
-          Write-Host "Terraform Directory:"
-          Get-ChildItem "${{ github.workspace }}\environments\preprod"
+          echo.
+          echo Preprod Directory:
+          dir "%GITHUB_WORKSPACE%\environments\preprod"
 
       # -----------------------------
-      # Azure OIDC Login
+      # Azure Login - OIDC
       # -----------------------------
       - name: Azure Login
         uses: azure/login@v2
@@ -70,37 +74,15 @@ jobs:
       # Azure Account Check
       # -----------------------------
       - name: Azure Account
-        shell: powershell
+        shell: cmd
         run: |
           az account show
-
-      # -----------------------------
-      # Key Vault - Get Secret
-      # -----------------------------
-      - name: Get Secret from Azure Key Vault
-        shell: powershell
-        run: |
-          $secret = az keyvault secret show `
-            --vault-name "${{ env.KEY_VAULT_NAME }}" `
-            --name "terraform-secret" `
-            --query value `
-            --output tsv
-
-          if ([string]::IsNullOrWhiteSpace($secret)) {
-            Write-Error "Key Vault secret was not found."
-            exit 1
-          }
-
-          "TF_VAR_app_secret=$secret" | Out-File `
-            -FilePath $env:GITHUB_ENV `
-            -Encoding utf8 `
-            -Append
 
       # -----------------------------
       # Gitleaks
       # -----------------------------
       - name: Gitleaks
-        shell: powershell
+        shell: cmd
         run: |
           gitleaks version
           gitleaks detect --source . --redact --verbose
@@ -109,7 +91,7 @@ jobs:
       # TFLint
       # -----------------------------
       - name: TFLint
-        shell: powershell
+        shell: cmd
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           tflint --version
@@ -120,7 +102,7 @@ jobs:
       # Terraform Init
       # -----------------------------
       - name: Terraform Init
-        shell: powershell
+        shell: cmd
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform init
@@ -129,7 +111,7 @@ jobs:
       # Terraform Validate
       # -----------------------------
       - name: Terraform Validate
-        shell: powershell
+        shell: cmd
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform validate
@@ -138,43 +120,34 @@ jobs:
       # Terraform Plan
       # -----------------------------
       - name: Terraform Plan
-        shell: powershell
+        shell: cmd
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform plan
 
 
   # ============================================================
-  # MAIN BRANCH
+  # MAIN BRANCH - APPLY
   # ============================================================
 
   terraform-apply:
+
     name: Terraform Apply
+
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
     runs-on: self-hosted
 
     steps:
 
       # -----------------------------
-      # Checkout
+      # Checkout Code
       # -----------------------------
       - name: Checkout Code
         uses: actions/checkout@v4
 
       # -----------------------------
-      # Verify Terraform Directory
-      # -----------------------------
-      - name: Verify Terraform Directory
-        shell: powershell
-        run: |
-          Write-Host "Current Directory:"
-          Get-Location
-
-          Write-Host "Terraform Directory:"
-          Get-ChildItem "${{ github.workspace }}\environments\preprod"
-
-      # -----------------------------
-      # Azure OIDC Login
+      # Azure Login - OIDC
       # -----------------------------
       - name: Azure Login
         uses: azure/login@v2
@@ -187,37 +160,15 @@ jobs:
       # Azure Account Check
       # -----------------------------
       - name: Azure Account
-        shell: powershell
+        shell: cmd
         run: |
           az account show
-
-      # -----------------------------
-      # Key Vault - Get Secret
-      # -----------------------------
-      - name: Get Secret from Azure Key Vault
-        shell: powershell
-        run: |
-          $secret = az keyvault secret show `
-            --vault-name "${{ env.KEY_VAULT_NAME }}" `
-            --name "terraform-secret" `
-            --query value `
-            --output tsv
-
-          if ([string]::IsNullOrWhiteSpace($secret)) {
-            Write-Error "Key Vault secret was not found."
-            exit 1
-          }
-
-          "TF_VAR_app_secret=$secret" | Out-File `
-            -FilePath $env:GITHUB_ENV `
-            -Encoding utf8 `
-            -Append
 
       # -----------------------------
       # Gitleaks
       # -----------------------------
       - name: Gitleaks
-        shell: powershell
+        shell: cmd
         run: |
           gitleaks version
           gitleaks detect --source . --redact --verbose
@@ -226,7 +177,7 @@ jobs:
       # TFLint
       # -----------------------------
       - name: TFLint
-        shell: powershell
+        shell: cmd
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           tflint --version
@@ -237,7 +188,7 @@ jobs:
       # Terraform Init
       # -----------------------------
       - name: Terraform Init
-        shell: powershell
+        shell: cmd
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform init
@@ -246,7 +197,7 @@ jobs:
       # Terraform Validate
       # -----------------------------
       - name: Terraform Validate
-        shell: powershell
+        shell: cmd
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform validate
@@ -255,7 +206,7 @@ jobs:
       # Terraform Plan
       # -----------------------------
       - name: Terraform Plan
-        shell: powershell
+        shell: cmd
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform plan
@@ -264,7 +215,7 @@ jobs:
       # Terraform Apply
       # -----------------------------
       - name: Terraform Apply
-        shell: powershell
+        shell: cmd
         working-directory: ${{ env.TF_WORKING_DIR }}
         run: |
           terraform apply -auto-approve
