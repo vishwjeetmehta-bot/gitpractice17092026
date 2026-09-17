@@ -1,0 +1,212 @@
+name: Terraform CI/CD
+
+on:
+  push:
+    branches:
+      - '**'
+
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: read
+
+env:
+  TF_WORKING_DIR: environments/preprod
+
+jobs:
+
+  # ============================================================
+  # FEATURE BRANCH / PR - PLAN
+  # ============================================================
+
+  terraform-plan:
+
+    name: Terraform Plan
+
+    if: github.ref != 'refs/heads/main'
+
+    runs-on: self-hosted
+
+    steps:
+
+      # -----------------------------
+      # Checkout Code
+      # -----------------------------
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # -----------------------------
+      # Verify Terraform Directory
+      # -----------------------------
+      - name: Verify Preprod Directory
+        shell: cmd
+        run: |
+          echo Current Directory:
+          cd
+
+          echo.
+          echo Repository Contents:
+          dir
+
+          echo.
+          echo Preprod Directory:
+          dir "%GITHUB_WORKSPACE%\environments\preprod"
+
+      # -----------------------------
+      # Azure Login - OIDC
+      # -----------------------------
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # -----------------------------
+      # Azure Account Check
+      # -----------------------------
+      - name: Azure Account
+        shell: cmd
+        run: |
+          az account show
+
+      # -----------------------------
+      # Gitleaks
+      # -----------------------------
+      - name: Gitleaks
+        shell: cmd
+        run: |
+          gitleaks version
+          gitleaks detect --source . --redact --verbose
+
+      
+
+      # -----------------------------
+      # Terraform Init
+      # -----------------------------
+      - name: Terraform Init
+        shell: cmd
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init
+
+      # -----------------------------
+      # Terraform Validate
+      # -----------------------------
+      - name: Terraform Validate
+        shell: cmd
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform validate
+
+      # -----------------------------
+      # Terraform Plan
+      # -----------------------------
+      - name: Terraform Plan
+        shell: cmd
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan
+
+
+  # ============================================================
+  # MAIN BRANCH - APPLY
+  # ============================================================
+
+  terraform-apply:
+
+    name: Terraform Apply
+
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    runs-on: self-hosted
+
+    steps:
+
+      # -----------------------------
+      # Checkout Code
+      # -----------------------------
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # -----------------------------
+      # Azure Login - OIDC
+      # -----------------------------
+      - name: Azure Login
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # -----------------------------
+      # Azure Account Check
+      # -----------------------------
+      - name: Azure Account
+        shell: cmd
+        run: |
+          az account show
+
+      # -----------------------------
+      # Gitleaks
+      # -----------------------------
+      - name: Gitleaks
+        shell: cmd
+        run: |
+          gitleaks version
+          gitleaks detect --source . --redact --verbose
+
+      # -----------------------------
+      # TFLint
+      # -----------------------------
+      - name: TFLint
+        shell: cmd
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          tflint --version
+          tflint --init
+          tflint
+
+      # -----------------------------
+      # Terraform Init
+      # -----------------------------
+      - name: Terraform Init
+        shell: cmd
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform init
+
+      # -----------------------------
+      # Terraform Validate
+      # -----------------------------
+      - name: Terraform Validate
+        shell: cmd
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform validate
+
+      # -----------------------------
+      # Terraform Plan
+      # -----------------------------
+      - name: Terraform Plan
+        shell: cmd
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan
+
+      # -----------------------------
+      # Terraform Apply
+      # -----------------------------
+      - name: Terraform Apply
+        shell: cmd
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform apply -auto-approve
