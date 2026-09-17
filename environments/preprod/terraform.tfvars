@@ -3,6 +3,10 @@ resource_groups = {
     name     = "rg-anxionsystem"
     location = "East US"
   }
+  rg2 = {
+    name     = "rg-anxionsystem2"
+    location = "East US"
+  }
 }
 
 vnet = {
