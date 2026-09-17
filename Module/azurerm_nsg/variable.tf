@@ -1,0 +1,2 @@
+variable "nsg" {}
+variable "nic" {}
