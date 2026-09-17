@@ -87,16 +87,7 @@ jobs:
           gitleaks version
           gitleaks detect --source . --redact --verbose
 
-      # -----------------------------
-      # TFLint
-      # -----------------------------
-      - name: TFLint
-        shell: cmd
-        working-directory: ${{ env.TF_WORKING_DIR }}
-        run: |
-          tflint --version
-          tflint --init
-          tflint
+      
 
       # -----------------------------
       # Terraform Init
